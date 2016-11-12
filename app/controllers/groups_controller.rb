@@ -37,7 +37,7 @@ class GroupsController < ApplicationController
 
     respond_to do |format|
       format.html # index.html.erb
-      format.json { render :json => @groups }
+      format.json { render :json => @groups.to_json(:methods => [:total_calls, :total_clients, :running]) }
     end
   end
 
@@ -49,7 +49,7 @@ class GroupsController < ApplicationController
 
     respond_to do |format|
       format.html # show.html.erb
-      format.json { render :json => @group }
+      format.json { render :json => @group.to_json(:methods => [:total_calls, :total_clients]) }
     end
   end
 
@@ -79,8 +79,8 @@ class GroupsController < ApplicationController
 
     respond_to do |format|
       if @group.save
-        format.html { redirect_to @group, :notice => 'Group was successfully created.' }
-        format.json { render :json => @group, :status => :created, :location => @group }
+        format.html { redirect_to operators_operator_index_path, :notice => 'Group was successfully created.' }
+        format.json { render :json => @group, :status => :created, :location => operators_operator_index_path }
       else
         format.html { render :action => "new" }
         format.json { render :json => @group.errors, :status => :unprocessable_entity }
@@ -96,7 +96,7 @@ class GroupsController < ApplicationController
 
     respond_to do |format|
       if @group.update_attributes(params[:group])
-        format.html { redirect_to @group, :notice => 'Group was successfully updated.' }
+        format.html { redirect_to operators_operator_index_path, :notice => 'Group was successfully updated.' }
         format.json { head :no_content }
       else
         format.html { render :action => "edit" }
@@ -122,9 +122,11 @@ class GroupsController < ApplicationController
     @group = Group.find(params[:group_id])
     respond_to do |format| 
       if @group.update_column(:status, 'start')
-        format.html { redirect_to :action => 'index', :notice => 'Grupo iniciado'}
+        format.html { redirect_to :back, :notice => 'Grupo iniciado'}
+        format.json { head :no_content }
       else
-        format.html {redirect_to :action => 'index' }
+        format.html {redirect_to :back }
+        format.json { render :json => @group.errors, :status => :unprocessable_entity }
       end
       
     end
@@ -134,9 +136,11 @@ class GroupsController < ApplicationController
     @group = Group.find(params[:group_id])
     respond_to do |format|
       if @group.update_column(:status, 'stop')
-        format.html { redirect_to :action => 'index', :notice => 'Grupo detenido'}
+        format.html { redirect_to :back, :notice => 'Grupo detenido'}
+        format.json { head :no_content }
       else
-        format.html {redirect_to :action => 'index' }
+        format.html {redirect_to :back }
+        format.json { render :json => @group.errors, :status => :unprocessable_entity }
       end
       
     end

@@ -115,9 +115,24 @@ class CampaignsController < ApplicationController
     @campaign = Campaign.find(params[:campaign_id])
     respond_to do |format|
       if @campaign.update_column(:status, Campaign::STATUS['START'])
+        unless $daemons_campaigns.key?(@campaign.id)
+          $daemons_campaigns[@campaign.id] = Thread.new {
+            Rails.logger.info "Threading Campaign #{@campaign.name}"
+            campaign = Campaign.find(@campaign.id)
+            while campaign.start?
+              CampaignService.new(@campaign.id).process(true)
+              sleep 1
+            end
+            Rails.logger.info "Threading Campaign #{@campaign.name} stopped."
+            ActiveRecord::Base.connection.close
+          }
+        end
+        
         format.html { redirect_to :action => 'index', :notice => 'Campaign was successfully updated.' }
+        format.json { head :no_content }
       else
-        format.html { redirect_to :action => 'campaigns#index'}        
+        format.html { redirect_to :action => 'campaigns#index'}
+        format.json { render json: @campaign.errors, status: :unprocessable_entity }
       end
     end
   end
@@ -127,9 +142,12 @@ class CampaignsController < ApplicationController
    @campaign = Campaign.find(params[:campaign_id])
     respond_to do |format|
       if @campaign.update_column(:status, Campaign::STATUS['PAUSE'])
+        
         format.html { redirect_to :action => 'index', :notice => 'Campaign was successfully updated.' }
+        format.json { head :no_content }
       else
-        format.html { redirect_to :action => 'campaigns#index'}        
+        format.html { redirect_to :action => 'campaigns#index'}
+        format.json { render json: @campaign.errors, status: :unprocessable_entity }
       end
     end
   end
@@ -139,9 +157,14 @@ class CampaignsController < ApplicationController
    @campaign = Campaign.find(params[:campaign_id])
     respond_to do |format|
       if @campaign.update_column(:status, Campaign::STATUS['END'])
+        th = $daemons_campaigns.delete(@campaign.id)
+        th.kill if th.respond_to?(:kill)
+        
         format.html { redirect_to :action => 'index', :notice => 'Campaign was successfully updated.' }
+        format.json { head :no_content }
       else
-        format.html { redirect_to :action => 'campaigns#index'}        
+        format.html { redirect_to :action => 'campaigns#index'}
+        format.json { render json: @campaign.errors, status: :unprocessable_entity }
       end
     end
   end

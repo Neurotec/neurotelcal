@@ -26,6 +26,10 @@ class Group < ActiveRecord::Base
     return false
   end
 
+  def total_clients
+    client.count
+  end
+
   def total_calls
     client.where(:callable => false).count
   end
@@ -39,5 +43,9 @@ class Group < ActiveRecord::Base
     r = Group.select('status').where(:id => self.id).first.status
     r == 'start'
   end
-  
+
+  def running
+    r = Group.select('status').where(:id => self.id).first.status
+    r == 'start'
+  end
 end

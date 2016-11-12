@@ -7,7 +7,7 @@ class Operators::MonitorController < Operators::ApplicationController
   def cdr
     messages = Message.where(:group_id => Group.where(:campaign_id => session[:monitor_campaign_id])).all
     
-    @calls = Call.paginate :page => params[:page], :conditions => ["message_id IN (?) ", messages]
+    @calls = Call.paginate :page => params[:page], :conditions => ["message_id IN (?) ", messages.map{|m| m.id}]
     respond_to do |format|
       format.html
     end

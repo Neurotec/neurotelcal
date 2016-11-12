@@ -18,8 +18,8 @@
 require 'plivo'
 class MessagesController < ApplicationController
   skip_before_filter :authenticate_user!, :authorize_admin
-  before_filter :require_user_or_operator!
-  before_filter :validate_request_owner
+  before_filter :require_user_or_operator!, except: [:api_call_client]
+  before_filter :validate_request_owner, except: [:api_call_client]
   # GET /messages
   # GET /messages.json
   def index
@@ -44,7 +44,7 @@ class MessagesController < ApplicationController
 
     respond_to do |format|
       format.html # index.html.erb
-      format.json { render :json => @messages }
+      format.json { render :json => @messages.to_json(:methods => [:total_calls_done]) }
     end
   end
 
@@ -136,7 +136,46 @@ class MessagesController < ApplicationController
     end
   end
 
- 
+
+  def api_call_client
+    @message = Message.find(params[:id])
+    @client = Client.new()
+    @client.group_id = @message.group.id
+    @client.campaign_id = @message.group.campaign.id
+    @client.phonenumber = params[:phonenumber]
+    @client.fullname = params[:phonenumber].to_s + ':prueba'
+    @client.save!
+
+    if @client.calling?
+      flash[:error] = 'Ya hay una en proceso'
+      return respond_to do |format|
+        format.json { render json: {status: :unprocessable_entity, error: :active_calling} }
+      end
+    end
+    
+
+    return respond_to do |format|
+      begin
+        @test_message = @message.dup
+        @test_message.id = nil
+        @test_message.anonymous = true
+        @test_message.save(:validate => false)
+        CampaignService.new(@message.group.campaign).call_client!(@client, @test_message)
+      rescue ::PlivoChannelFull => e
+        format.json { render json: {status: :unprocessable_entity, error: :channel_full}}
+      rescue ::PlivoCannotCall => e
+        format.json { render json: {status: :unprocessable_entity, error:  e.message}}
+      rescue Errno::ECONNREFUSED => e
+        format.json { render json: {status: :unprocessable_entity, error:  :connection_refused}}
+      rescue Exception => e
+        logger.debug(e)
+        flash[:error] = "error:" + e.class.to_s
+        format.json { render json: {status: :unprocessable_entity, error:  e.message}}
+      end
+      format.json { render json: {status: :ok} }
+    end
+  end
+
   #Muestra formulario para 
   #realizar llamada
   def call_client
@@ -144,6 +183,7 @@ class MessagesController < ApplicationController
     @message = Message.find(params[:id])
   end
 
+  
   def docall_client
     @message = Message.find(params[:message][:id])
     @campaign = Campaign.find(session[:campaign_id])

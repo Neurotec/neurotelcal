@@ -131,8 +131,8 @@ class Operators::ClientsController < Operators::ApplicationController
       format.html 
     end
   end
-  
-  def create_upload_massive
+
+    def create_upload_massive
     @group = Group.where(:campaign_id => session[:campaign_id], :id => session[:group_id]).first
 
     if params[:list_clients]
@@ -146,15 +146,13 @@ class Operators::ClientsController < Operators::ApplicationController
         :ext => File.extname(params[:list_clients].original_filename),
         :path => newfile.path
       }
-
-      Delayed::Job.enqueue(::CDRJob.new(file, session[:user_id], session[:campaign_id], session[:group_id]), :queue => 'clients_import')
-      
-
+      Delayed::Job.enqueue(::ClientJob.new(file, session[:user_id], session[:campaign_id], session[:group_id]), :queue => 'clients_import')
     end
     
     respond_to do |format|
       format.html { render :action => 'new_upload_massive'}
     end
   end
-  
+
+
 end

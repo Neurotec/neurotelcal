@@ -1,58 +1,45 @@
 #!/usr/bin/env ruby
-
+require 'daemons'
 # You might want to change this
 ENV["RAILS_ENV"] ||= "production"
 
-root = File.expand_path(File.dirname(__FILE__))
-root = File.dirname(root) until File.exists?(File.join(root, 'config'))
-Dir.chdir(root)
+require File.dirname(__FILE__) + "/../../config/environment"
+#Rails.application.require_environment!
 
-require File.join(root, "config", "environment")
-
-$running_campaigns = {}
 
 $running = true
 Signal.trap("TERM") do 
   $running = false
 end
 
+running_campaings = {}
 while($running) do
+  Rails.logger.auto_flushing = true
   Rails.logger.info "Procesing campaigns"
 
+
   Campaign.all.each do |campaign|
-    if $running_campaigns.has_key?(campaign.id)
-      $running_campaigns.delete(campaign.id) if campaign.end?
-      next
-    end
-    next unless campaign.start?
+    next running_campaings.key?(campaign.id)
     Rails.logger.info "Testing campaign #{campaign.name}"
 
+    running_campaings[campaign.id] = Thread.new {
+      Rails.logger.info("Processing campaign #{campaign.name}")
+      CampaignService.new(campaign.id).process(true)
+      Rails.logger.info("Stopped campaign #{campaign.name}")
+      ActiveRecord::Base.connection.close
+    }
 
-    ::ActiveRecord::Base.establish_connection
-    pid = fork do
-      fork_campaign = Campaign.find(campaign.id)
-      Rails.logger.info "Forking process for campaign #{fork_campaign.name} ENV #{ENV['RAILS_ENV']}"
-      ENV["RAILS_ENV"] ||= "production"
-
-      root = File.expand_path(File.dirname(__FILE__))
-      root = File.dirname(root) until File.exists?(File.join(root, 'config'))
-      Dir.chdir(root)
-
-      require File.join(root, "config", "environment")
-
-      while fork_campaign.start?
-        Rails.logger.debug("Processing campaign #{campaign.name}")
-        CampaignService.new(fork_campaign).process(true)
-        sleep 5
-      end
-      Rails.logger.debug("Stopped campaign #{campaign.name}")
+  end
+  
+  sleep 1
+  running_campaings.each do |campaign_id, thread|
+    if thread.stop?
+      running_campaings.delete(campaign.id)
     end
-   $running_campaigns[campaign.id] = pid
   end
 
-  sleep 10
 end
 
-$running_campaigns.each do |campaign_id, task|
-  Process.waitpid pid
+running_campaings.each do |campaign_id, thread|
+  thread.join
 end

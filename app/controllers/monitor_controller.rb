@@ -39,7 +39,7 @@ class MonitorController < ApplicationController
 
     respond_to do |format|
       format.html { render :layout => nil}
-      format.json { render :json => @calls }
+      format.json { render :json => @calls.to_json(:includes => [:client, :message]) }
     end
   end
 

@@ -34,7 +34,7 @@ class Operators::OperatorController < Operators::ApplicationController
 
     respond_to do |format|
       format.html # index.html.erb
-      format.json { render :json => @groups }
+      format.json { render :json => @groups.to_json(:methods => [:total_clients, :total_calls, :running]) }
     end
   end
 
@@ -46,7 +46,7 @@ class Operators::OperatorController < Operators::ApplicationController
 
     respond_to do |format|
       format.html # show.html.erb
-      format.json { render :json => @group }
+      format.json { render :json => @group.to_json(:methods => [:total_clients, :total_calls]) }
     end
   end
 

@@ -1,7 +1,7 @@
 class CampaignService
   
-  def initialize(campaign)
-    @campaign = campaign
+  def initialize(campaign_id)
+    @campaign = Campaign.find(campaign_id)
   end
 
   #Campaign llama cliente, buscando un espacio disponible entre sus servidores plivos
@@ -100,7 +100,7 @@ class CampaignService
 
 
       while @campaign.using_channels >= @campaign.active_channels
-        return false if daemonize
+        return false if !daemonize
         sleep 1
         Rails.logger.debug('process: all channels using waiting for.')
       end
@@ -208,7 +208,7 @@ class CampaignService
           Rails.logger.debug('process: can not call the client %d finished de calendar or all clients for message calendar all called' % client.id)
           return false
         else
-          if client.can_call?(message, message_calendar)
+          if client.can_call?(message)
             r = call_client(client, message, message_calendar)
             if r.is_a?(String)
               return true

@@ -54,8 +54,17 @@ class Campaign < ActiveRecord::Base
     Client.where(:group_id => self.group.all, :callable => true).order('priority DESC, callable DESC, created_at ASC')
   end
 
+  def client_rest_totals
+    client_rest.count
+  end
+
+
   def client
     Client.where(:group_id => self.group.all).order('priority DESC, callable DESC, created_at ASC')
+  end
+
+  def client_totals
+    client.count
   end
   
   def active_channels

@@ -17,7 +17,7 @@
   <tr>
     <td><%= I18n.t(group.status) %></td>
     <td><%= group.name %></td>
-    <td><%= group.client.count %></td>
+    <td><%= group.total_clients %></td>
     <td><%= group.total_calls %></td>
     <td>
       <%= link_to I18n.t('campaign.l.START'), group_status_start_path(group), :method => :put, :class => 'campaign-status campaign-status-start' %>

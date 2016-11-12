@@ -41,8 +41,8 @@ class Resource < ActiveRecord::Base
       short_file = File.join('public', 'resources', type_file, name_file)
       path_file = Rails.root.join('public', 'resources', type_file, name_file)
 
-      FileUtils.cp uploaded_io.tempfile, path_file
-
+      FileUtils.mv uploaded_io.tempfile, path_file, force: true
+      FileUtils.chmod 0777, path_file
 
       self.file = short_file
 
@@ -66,8 +66,11 @@ class Resource < ActiveRecord::Base
           errors.add(:file, 'Archivo no compatible con correo-e')
         end
       when 'audio'
-        unless mime_audio.include? file.content_type
-          errors.add(:file, 'Archivo no compatible con tipo audio')
+        case file
+        when ActionDispatch::Http::UploadedFile
+          unless mime_audio.include? file.content_type
+            errors.add(:file, 'Archivo no compatible con tipo audio')
+          end
         end
       when 'documento'
         unless mime_document.include? file.content_type
